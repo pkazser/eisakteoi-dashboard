@@ -12,6 +12,9 @@ st.title("📊 Ανάλυση Εισακτέων ΔΙ.ΠΑ.Ε. 2024–2025")
 # === Φόρτωση δεδομένων ===
 df = pd.read_csv("dipae_analysis_2024_2025.csv")
 
+# Υπολογισμός στήλης διαφοράς βάσης (πριν από φιλτράρισμα)
+df["Διαφορά_Βάσης"] = df["Βάση_2025"] - df["Βάση_2024"]
+
 # === Sidebar φίλτρα ===
 st.sidebar.header("🔍 Φίλτρα")
 search = st.sidebar.text_input("Αναζήτηση Τμήματος")
@@ -35,8 +38,8 @@ else:
     df_filtered = df.copy()
 
 # === Tabs ===
-tab1, tab2, tab3, tab4 = st.tabs([
-    "📋 Πίνακας Τμημάτων", "📈 Σύγκριση Κάλυψης", "📊 Μόρια & Βάσεις", "📑 Στοιχεία ανά Τμήμα"
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "📋 Πίνακας Τμημάτων", "📈 Σύγκριση Κάλυψης", "📊 Μόρια & Βάσεις", "📑 Στοιχεία ανά Τμήμα", "🏆 Top-5"
 ])
 
 with tab1:
@@ -50,7 +53,6 @@ with tab1:
     ]
     st.dataframe(df_filtered[display_cols], use_container_width=True)
 
-    # Προβολή συνόλων για Θέσεις και Επιτυχόντες
     total_2025_positions = df_filtered["Θέσεις_2025"].sum()
     total_2025_success = df_filtered["Επιτυχόντες_2025"].sum()
     total_2024_positions = df_filtered["Θέσεις_2024"].sum()
@@ -60,7 +62,6 @@ with tab1:
     st.markdown(f"**2025:** Θέσεις: {int(total_2025_positions)}, Επιτυχόντες: {int(total_2025_success)}")
     st.markdown(f"**2024:** Θέσεις: {int(total_2024_positions)}, Επιτυχόντες: {int(total_2024_success)}")
 
-    # Γράφημα Επιτυχόντων
     st.subheader("📊 Σύγκριση Επιτυχόντων 2024 vs 2025")
     fig_success = px.bar(df_filtered, x="ΟΝΟΜΑ ΣΧΟΛΗΣ",
                          y=["Επιτυχόντες_2024", "Επιτυχόντες_2025"],
@@ -121,3 +122,58 @@ with tab4:
 
     if pd.notna(row["Ιστοσελίδα Τμήματος"]):
         st.markdown(f"[🔗 Επίσκεψη στην Ιστοσελίδα]({row['Ιστοσελίδα Τμήματος']})")
+
+    st.markdown("### 📊 Γραφήματα Σύγκρισης για το Τμήμα")
+
+    fig_s1 = px.bar(x=["2024", "2025"], y=[row['Επιτυχόντες_2024'], row['Επιτυχόντες_2025']],
+                    labels={"x": "Έτος", "y": "Επιτυχόντες"}, title="Σύγκριση Επιτυχόντων")
+    fig_s2 = px.bar(x=["2024", "2025"], y=[row['Κάλυψη_2024'], row['Κάλυψη_2025']],
+                    labels={"x": "Έτος", "y": "Κάλυψη %"}, title="Σύγκριση Ποσοστού Κάλυψης")
+    fig_s3 = px.bar(x=["2024", "2025"], y=[row['Βάση_2024'], row['Βάση_2025']],
+                    labels={"x": "Έτος", "y": "Βάση"}, title="Σύγκριση Βάσης Εισαγωγής")
+
+    st.plotly_chart(fig_s1, use_container_width=True)
+    st.plotly_chart(fig_s2, use_container_width=True)
+    st.plotly_chart(fig_s3, use_container_width=True)
+
+with tab5:
+    st.subheader("🏆 Top-5 Κατηγορίες")
+
+    top_base = df_filtered.sort_values(by="Βάση_2025", ascending=False).head(5)
+    st.markdown("### 📌 Μεγαλύτερη Βάση Εισαγωγής 2025")
+    st.dataframe(top_base[["ΟΝΟΜΑ ΣΧΟΛΗΣ", "Βάση_2025"]], use_container_width=True)
+    fig1 = px.bar(top_base, x="ΟΝΟΜΑ ΣΧΟΛΗΣ", y="Βάση_2025", title="Top-5 Βάσεις 2025",
+                 range_y=[0, 20000], height=450)
+    st.plotly_chart(fig1, use_container_width=True)
+
+
+   # top_increase = df_filtered.sort_values(by="Διαφορά_Βάσης", ascending=False).head(5)
+
+    #st.markdown("### 📈 Μεγαλύτερη Αύξηση Βάσης Εισαγωγής (2025 vs 2024)")
+    #st.dataframe(top_increase[["ΟΝΟΜΑ ΣΧΟΛΗΣ", "Βάση_2024", "Βάση_2025", "Διαφορά_Βάσης"]], use_container_width=True)
+
+    #fig2 = px.bar(
+    #top_increase,
+    #x="ΟΝΟΜΑ ΣΧΟΛΗΣ",
+    #y="Διαφορά_Βάσης",
+    #title="Top-5 Αύξηση Βάσης",
+    #height=450
+    #)
+    #fig2.update_traces(text=top_increase["Διαφορά_Βάσης"], textposition="outside")
+    #fig2.update_layout(yaxis=dict(range=[0, top_increase["Διαφορά_Βάσης"].max() + 50]))
+    #st.plotly_chart(fig2, use_container_width=True)
+    top_increase = df_filtered.sort_values(by="Διαφορά_Βάσης", ascending=False).head(5)
+    st.markdown("### 📈 Μεγαλύτερη Αύξηση Βάσης Εισαγωγής (2025 vs 2024)")
+    st.dataframe(top_increase[["ΟΝΟΜΑ ΣΧΟΛΗΣ", "Βάση_2024", "Βάση_2025", "Διαφορά_Βάσης"]], use_container_width=True)
+    fig2 = px.bar(top_increase, x="ΟΝΟΜΑ ΣΧΟΛΗΣ", y="Διαφορά_Βάσης", title="Top-5 Αύξηση Βάσης", height=450)
+    st.plotly_chart(fig2, use_container_width=True)
+
+    exclude_keywords = ["ΣΥΝΟΛΟ", "ΜΑΧ"]
+    top_success = df_filtered[~df_filtered["ΟΝΟΜΑ ΣΧΟΛΗΣ"].str.upper().isin(exclude_keywords)]
+    top_success = top_success.sort_values(by="Επιτυχόντες_2025", ascending=False).head(5)
+
+    st.markdown("### 🧑‍🎓 Περισσότεροι Επιτυχόντες 2025")
+    st.dataframe(top_success[["ΟΝΟΜΑ ΣΧΟΛΗΣ", "Επιτυχόντες_2025"]], use_container_width=True)
+    fig3 = px.bar(top_success, x="ΟΝΟΜΑ ΣΧΟΛΗΣ", y="Επιτυχόντες_2025",
+                  title="Top-5 Επιτυχόντες 2025", height=450)
+    st.plotly_chart(fig3, use_container_width=True)
